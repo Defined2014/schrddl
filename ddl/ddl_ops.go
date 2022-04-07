@@ -79,6 +79,9 @@ func (c *testCase) generateDDLOps() error {
 	if err := c.generateModifyColumn2(5); err != nil {
 		return errors.Trace(err)
 	}
+	if err := c.generateMultiSchemaChange(defaultTime); err != nil {
+		return errors.Trace(err)
+	}
 	return nil
 }
 
@@ -108,6 +111,8 @@ const (
 	// ddlModifyColumn2 is used to test column type change.
 	ddlModifyColumn2
 
+	ddlMultiSchemaChange
+
 	ddlKindNil
 )
 
@@ -135,6 +140,8 @@ var mapOfDDLKind = map[string]DDLKind{
 
 	"modify column":  ddlModifyColumn,
 	"modify column2": ddlModifyColumn2,
+
+	"multi schema change": ddlMultiSchemaChange,
 }
 
 var mapOfDDLKindToString = map[DDLKind]string{
@@ -160,6 +167,7 @@ var mapOfDDLKindToString = map[DDLKind]string{
 	ddlModifyTableCharsetAndCollate: "modify table charset and collate",
 	ddlModifyColumn:                 "modify column",
 	ddlModifyColumn2:                "modify column2",
+	ddlMultiSchemaChange:            "multi schema change",
 }
 
 // mapOfDDLKindProbability use to control every kind of ddl request execute probability.
@@ -174,6 +182,8 @@ var mapOfDDLKindProbability = map[DDLKind]float64{
 	ddlModifyColumn:  0.5,
 	ddlModifyColumn2: 0.5,
 	ddlDropColumn:    0.5,
+
+	ddlMultiSchemaChange: 0.5,
 
 	ddlCreateView: 0.30,
 
@@ -253,6 +263,8 @@ func (c *testCase) updateTableInfo(task *ddlJobTask) error {
 		return c.setDefaultValueJob(task)
 	case ddlModifyColumn2:
 		return c.modifyColumnJob(task)
+	case ddlMultiSchemaChange:
+		return c.multiSchemaChangeJob(task)
 	}
 	return fmt.Errorf("unknow ddl task , %v", *task)
 }
