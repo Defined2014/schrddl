@@ -172,31 +172,31 @@ var mapOfDDLKindToString = map[DDLKind]string{
 
 // mapOfDDLKindProbability use to control every kind of ddl request execute probability.
 var mapOfDDLKindProbability = map[DDLKind]float64{
-	ddlAddTable:  0.15,
-	ddlDropTable: 0.15,
+	ddlAddTable:  0,
+	ddlDropTable: 0,
 
-	ddlAddIndex:  0.8,
-	ddlDropIndex: 0.5,
+	ddlAddIndex:  0,
+	ddlDropIndex: 0,
 
-	ddlAddColumn:     0.8,
-	ddlModifyColumn:  0.5,
-	ddlModifyColumn2: 0.5,
-	ddlDropColumn:    0.5,
+	ddlAddColumn:     0,
+	ddlModifyColumn:  0,
+	ddlModifyColumn2: 0,
+	ddlDropColumn:    0,
 
-	ddlMultiSchemaChange: 0.5,
+	ddlMultiSchemaChange: 1,
 
-	ddlCreateView: 0.30,
+	ddlCreateView: 0,
 
-	ddlCreateSchema:                 0.10,
-	ddlDropSchema:                   0.10,
-	ddlRenameTable:                  0.50,
-	ddlRenameIndex:                  0.50,
-	ddlTruncateTable:                0.50,
-	ddlShardRowID:                   0.30,
-	ddlRebaseAutoID:                 0.15,
-	ddlSetDefaultValue:              0.30,
-	ddlModifyTableComment:           0.30,
-	ddlModifyTableCharsetAndCollate: 0.30,
+	ddlCreateSchema:                 0,
+	ddlDropSchema:                   0,
+	ddlRenameTable:                  0,
+	ddlRenameIndex:                  0,
+	ddlTruncateTable:                0,
+	ddlShardRowID:                   0,
+	ddlRebaseAutoID:                 0,
+	ddlSetDefaultValue:              0,
+	ddlModifyTableComment:           0,
+	ddlModifyTableCharsetAndCollate: 0,
 }
 
 type ddlJob struct {
@@ -468,6 +468,14 @@ func getLastDDLInfo(conn *sql.Conn) (uint64, string, error) {
 		return 0, "", err
 	}
 	return seqNum, query, row.Close()
+}
+
+func (c *testCase) getTable(t interface{}) *ddlTestTable {
+	if t == nil {
+		return c.pickupRandomTable()
+	} else {
+		return t.(*multiSchemaChangeCtx).tblInfo
+	}
 }
 
 /*
@@ -1154,8 +1162,8 @@ func generateIndexSignture(index ddlTestIndex) string {
 	return signature
 }
 
-func (c *testCase) prepareAddIndex(_ interface{}, taskCh chan *ddlJobTask) error {
-	table := c.pickupRandomTable()
+func (c *testCase) prepareAddIndex(t interface{}, taskCh chan *ddlJobTask) error {
+	table := c.getTable(t)
 	if table == nil {
 		return nil
 	}
@@ -1266,8 +1274,8 @@ func (c *testCase) generateRenameIndex(repeat int) error {
 	return nil
 }
 
-func (c *testCase) prepareRenameIndex(_ interface{}, taskCh chan *ddlJobTask) error {
-	table := c.pickupRandomTable()
+func (c *testCase) prepareRenameIndex(t interface{}, taskCh chan *ddlJobTask) error {
+	table := c.getTable(t)
 	if table == nil || len(table.indexes) == 0 {
 		return nil
 	}
@@ -1309,8 +1317,8 @@ func (c *testCase) generateDropIndex(repeat int) error {
 	return nil
 }
 
-func (c *testCase) prepareDropIndex(_ interface{}, taskCh chan *ddlJobTask) error {
-	table := c.pickupRandomTable()
+func (c *testCase) prepareDropIndex(t interface{}, taskCh chan *ddlJobTask) error {
+	table := c.getTable(t)
 	if table == nil {
 		return nil
 	}
@@ -1392,8 +1400,8 @@ func (c *testCase) generateAddColumn(repeat int) error {
 	return nil
 }
 
-func (c *testCase) prepareAddColumn(_ interface{}, taskCh chan *ddlJobTask) error {
-	table := c.pickupRandomTable()
+func (c *testCase) prepareAddColumn(ctx interface{}, taskCh chan *ddlJobTask) error {
+	table := c.getTable(ctx)
 	if table == nil {
 		return nil
 	}
@@ -1476,8 +1484,8 @@ func (c *testCase) generateModifyColumn2(repeat int) error {
 	return nil
 }
 
-func (c *testCase) prepareModifyColumn2(_ interface{}, taskCh chan *ddlJobTask) error {
-	table := c.pickupRandomTable()
+func (c *testCase) prepareModifyColumn2(t interface{}, taskCh chan *ddlJobTask) error {
+	table := c.getTable(t)
 	if table == nil {
 		return nil
 	}
@@ -1553,8 +1561,8 @@ func (c *testCase) generateModifyColumn(repeat int) error {
 	return nil
 }
 
-func (c *testCase) prepareModifyColumn(_ interface{}, taskCh chan *ddlJobTask) error {
-	table := c.pickupRandomTable()
+func (c *testCase) prepareModifyColumn(t interface{}, taskCh chan *ddlJobTask) error {
+	table := c.getTable(t)
 	if table == nil {
 		return nil
 	}
@@ -1670,8 +1678,8 @@ func (c *testCase) generateDropColumn(repeat int) error {
 	return nil
 }
 
-func (c *testCase) prepareDropColumn(_ interface{}, taskCh chan *ddlJobTask) error {
-	table := c.pickupRandomTable()
+func (c *testCase) prepareDropColumn(ctx interface{}, taskCh chan *ddlJobTask) error {
+	table := c.getTable(ctx)
 	if table == nil {
 		return nil
 	}
@@ -1734,6 +1742,7 @@ func (c *testCase) dropColumnJob(task *ddlJobTask) error {
 	if c.isTableDeleted(table) {
 		return fmt.Errorf("table %s is not exists", table.name)
 	}
+	fmt.Println(jobArg)
 	columnToDrop := jobArg.column
 	if columnToDrop.indexReferences > 0 {
 		if columnToDrop.indexReferences == 1 {
